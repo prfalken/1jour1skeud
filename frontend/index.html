@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1jour1skeud - Découvrez le disque mystère du jour</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <i class="bi bi-vinyl-fill"></i>
+                <h1>1jour1skeud</h1>
+            </div>
+            <div class="subtitle">
+                <p>Découvrez le disque mystère du jour grâce aux indices révélés</p>
+                <div class="date" id="game-date"></div>
+            </div>
+        </header>
+
+        <main class="game-container">
+            <!-- Game Status -->
+            <div class="game-status" id="game-status">
+                <div class="guess-counter">
+                    <i class="bi bi-music-note-beamed"></i>
+                    <span id="guess-count">0</span> essai(s)
+                </div>
+                <div class="mystery-indicator">
+                    <i class="bi bi-question-circle"></i>
+                    <span>Disque mystère en cours</span>
+                </div>
+            </div>
+
+            <!-- Search Input -->
+            <div class="search-container">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input 
+                        type="text" 
+                        id="album-search" 
+                        placeholder="Recherchez un album ou une chanson..."
+                        autocomplete="off"
+                    >
+                    <button class="search-submit-btn" id="search-submit" disabled>
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+                <div class="search-results" id="search-results"></div>
+            </div>
+
+            <!-- Clues Board -->
+            <div class="clues-board" id="clues-board">
+                <div class="clues-header">
+                    <h3><i class="bi bi-lightbulb"></i> Indices découverts</h3>
+                    <p>Les attributs que vos essais partagent avec le disque mystère</p>
+                </div>
+                <div class="clues-container" id="clues-container">
+                    <div class="no-clues">
+                        <i class="bi bi-search"></i>
+                        <p>Faites un premier essai pour découvrir des indices...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guesses History -->
+            <div class="guesses-history" id="guesses-history">
+                <div class="history-header">
+                    <h3><i class="bi bi-clock-history"></i> Vos essais</h3>
+                </div>
+                <div class="guesses-container" id="guesses-container">
+                    <!-- Guesses will be displayed here -->
+                </div>
+            </div>
+
+            <!-- Victory Modal -->
+            <div class="modal" id="victory-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2><i class="bi bi-trophy"></i> Félicitations !</h2>
+                        <button class="close-button" id="close-victory">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="victory-message">
+                            <p>Vous avez découvert le disque mystère du jour !</p>
+                        </div>
+                        <div class="mystery-album" id="mystery-album-display">
+                            <!-- Mystery album info will be displayed here -->
+                        </div>
+                        <div class="victory-stats">
+                            <div class="stat">
+                                <span class="stat-label">Essais nécessaires :</span>
+                                <span class="stat-value" id="final-guesses"></span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-label">Indices découverts :</span>
+                                <span class="stat-value" id="final-clues"></span>
+                            </div>
+                        </div>
+                        <div class="share-section">
+                            <button class="share-button" id="share-button">
+                                <i class="bi bi-share"></i>
+                                Partager votre découverte
+                            </button>
+                        </div>
+                        <div class="next-game">
+                            <p>Revenez demain pour un nouveau disque mystère !</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instructions Modal -->
+            <div class="modal" id="instructions-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Comment jouer</h2>
+                        <button class="close-button" id="close-instructions">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="instructions">
+                            <div class="instruction">
+                                <i class="bi bi-search"></i>
+                                <div>
+                                    <h3>Recherchez et proposez</h3>
+                                    <p>Tapez le nom d'un album ou d'une chanson et proposez-le comme essai</p>
+                                </div>
+                            </div>
+                            <div class="instruction">
+                                <i class="bi bi-lightbulb"></i>
+                                <div>
+                                    <h3>Découvrez les indices</h3>
+                                    <p>Chaque essai révèle les attributs partagés avec le disque mystère : artiste, genre, année, label...</p>
+                                </div>
+                            </div>
+                            <div class="instruction">
+                                <i class="bi bi-puzzle"></i>
+                                <div>
+                                    <h3>Déduisez progressivement</h3>
+                                    <p>Utilisez les indices accumulés pour éliminer les possibilités et vous rapprocher du disque mystère</p>
+                                </div>
+                            </div>
+                            <div class="instruction">
+                                <i class="bi bi-trophy"></i>
+                                <div>
+                                    <h3>Trouvez le disque mystère</h3>
+                                    <p>Quand vous identifiez le bon disque, vous gagnez ! Un nouveau mystère vous attend demain</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="game-rules">
+                            <h4>Règles du jeu</h4>
+                            <ul>
+                                <li>Pas de limite d'essais - explorez autant que vous voulez</li>
+                                <li>Les indices ne montrent que les similitudes, jamais les différences</li>
+                                <li>Un nouveau disque mystère chaque jour</li>
+                                <li>Jeu gratuit et ouvert à tous</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <button class="footer-button" id="instructions-button">
+                <i class="bi bi-question-circle"></i>
+                Comment jouer
+            </button>
+            <div class="footer-text">
+                <p>Un jeu de déduction musicale quotidien • Inspiré de <a href="https://1jour1film.com" target="_blank">1jour1film</a></p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Chargement du disque mystère...</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4.14.3/dist/algoliasearch-lite.umd.js"></script>
+    <script src="config.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
