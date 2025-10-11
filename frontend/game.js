@@ -79,74 +79,33 @@ class Game1Jour1Skeud {
     }
 
     async selectDailyAlbum() {
-        try {
-            // Select a high-quality album prioritizing community rating and number of votes
-            
-            // Search for albums and select one based on the seed
-            const searchResponse = await this.algoliaIndex.search('', {
-                hitsPerPage: 1000, // Get more albums to filter from
-                attributesToRetrieve: [
-                    'objectID', 'title', 'artists', 'genres', 'release_year', 'countries', 'tags',
-                    // Support both processed fields and raw nested rating
-                    'rating_value', 'rating_count', 'rating'
-                ]
-            });
-
-            if (searchResponse.hits.length === 0) {
-                throw new Error('No albums found in database');
+        const devResponse = await fetch('mistery-album-test.json', { cache: 'no-store' });
+        if (devResponse.ok) {
+            const devData = await devResponse.json();
+            if (devData && typeof devData === 'object') {
+                // If only objectID is provided, resolve full object from Algolia
+                if (devData.objectID && this.algoliaIndex) {
+                    const attrs = [
+                        'objectID', 'title', 'artists', 'genres', 'release_year', 'countries', 'tags',
+                        'rating_value', 'rating_count', 'rating'
+                    ];
+                    try {
+                        const obj = await this.algoliaIndex.getObject(devData.objectID, { attributesToRetrieve: attrs });
+                        this.mysteryAlbum = obj;
+                    } catch (e) {
+                        // Fallback: use data directly from file
+                        this.mysteryAlbum = devData;
+                    }
+                } else {
+                    this.mysteryAlbum = devData;
+                }
+                console.log('Loaded mystery album from mistery-album-test.json');
+                console.log(this.mysteryAlbum);
+                return;
             }
-
-            // Filter for higher quality/well-known albums
-            const qualityAlbums = searchResponse.hits.filter(album => {
-                // Prioritize albums with:
-                // 1. Have genres (indicates more documented/known albums)
-                // 2. Have multiple tags (indicates popularity/documentation)
-                // 3. Have rating votes (even if rating is null, votes indicate interest)
-                // 4. Released in classic decades (1960s-2000s for well-established albums)
-                const hasGenres = album.genres && album.genres.length > 0;
-                const hasMultipleTags = album.tags && album.tags.length >= 2;
-                const hasVotes = (album.rating && album.rating.votes_count > 0) ||
-                    (typeof album.rating_count === 'number' && album.rating_count > 0);
-                const isFromClassicEra = album.release_year && 
-                    parseInt(album.release_year) >= 1960 && 
-                    parseInt(album.release_year) <= 2025;
-                
-                // Album must have at least genres and be from a reasonable time period
-                return hasGenres && isFromClassicEra && (hasMultipleTags || hasVotes);
-            });
-
-            // If no quality albums found, fallback to albums with just genres
-            const albumsToChooseFrom = qualityAlbums.length > 0 ? qualityAlbums : 
-                searchResponse.hits.filter(album => album.genres && album.genres.length > 0);
-
-            if (albumsToChooseFrom.length === 0) {
-                throw new Error('No suitable albums found in database');
-            }
-
-            // Select highest-rated album; break ties by vote count, then title
-            const sortedByRatingAndVotes = albumsToChooseFrom.slice().sort((a, b) => {
-                const ratingA = (typeof a.rating_value === 'number' ? a.rating_value :
-                    (a.rating && typeof a.rating.value === 'number' ? a.rating.value : -1));
-                const ratingB = (typeof b.rating_value === 'number' ? b.rating_value :
-                    (b.rating && typeof b.rating.value === 'number' ? b.rating.value : -1));
-                if (ratingA !== ratingB) return ratingB - ratingA;
-                const votesA = (typeof a.rating_count === 'number' ? a.rating_count :
-                    (a.rating && typeof a.rating.votes_count === 'number' ? a.rating.votes_count : 0));
-                const votesB = (typeof b.rating_count === 'number' ? b.rating_count :
-                    (b.rating && typeof b.rating.votes_count === 'number' ? b.rating.votes_count : 0));
-                if (votesA !== votesB) return votesB - votesA;
-                return (a.title || '').localeCompare(b.title || '');
-            });
-            this.mysteryAlbum = sortedByRatingAndVotes[0];
-            
-            console.log('Daily mystery album selected:', this.mysteryAlbum);
-            console.log('Selected from', albumsToChooseFrom.length, 'quality albums out of', searchResponse.hits.length, 'total albums');
-        } catch (error) {
-            console.error('Error selecting daily album:', error);
-            throw error;
         }
     }
-
+    
     hashCode(str) {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {

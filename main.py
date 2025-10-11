@@ -19,7 +19,6 @@ from algoliasearch.search.client import SearchClientSync
 from algolia_indexer import AlgoliaIndexer
 from algolia_searcher import AlgoliaSearcher
 from algolia import AlgoliaApp
-from artists_updater import ArtistsUpdater
 
 
 class MusicAlbumSyncApp:
@@ -35,7 +34,6 @@ class MusicAlbumSyncApp:
         self.algolia_app = AlgoliaApp(self.config, self.algolia_client)
         self.algolia_indexer = AlgoliaIndexer(self.config, self.algolia_client)
         self.algolia_searcher = AlgoliaSearcher(self.config, self.algolia_client)
-        self.artists_updater = ArtistsUpdater(self.config, self.algolia_client)
 
     def validate_environment(self) -> bool:
         """Validate that all required environment variables are set."""
@@ -176,13 +174,6 @@ Examples:
     parser.add_argument(
         "--stats", action="store_true", help="Show Algolia index statistics"
     )
-    parser.add_argument(
-        "--update-artists",
-        type=str,
-        metavar="ARTISTS_JSONL",
-        help="Process artists JSON-lines file and apply partial updates",
-    )
-
     args = parser.parse_args()
 
     # Create app instance
@@ -208,10 +199,6 @@ Examples:
                 result.get("main_artist", "N/A"),
                 result.get("release_year", "N/A"),
             )
-    elif args.update_artists:
-        app.artists_updater.update_from_file(
-            args.update_artists, max_records=args.max_records
-        )
     else:
         if args.data_file:
             success = app.run_full_sync_batched(
@@ -220,8 +207,8 @@ Examples:
                 batch_size=args.batch_size,
             )
 
-        if not success:
-            sys.exit(1)
+    if not success:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
