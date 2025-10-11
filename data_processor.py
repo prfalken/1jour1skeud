@@ -107,7 +107,9 @@ class AlbumDataProcessor:
         except Exception:
             return None
 
-    def safe_numeric_convert(self, value: Any, default: Union[int, float] = 0) -> Union[int, float]:
+    def safe_numeric_convert(
+        self, value: Any, default: Union[int, float] = 0
+    ) -> Union[int, float]:
         """Safely convert value to numeric type."""
         if value is None:
             return default
@@ -140,7 +142,9 @@ class AlbumDataProcessor:
 
         return countries
 
-    def process_album_record(self, album_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def process_album_record(
+        self, album_data: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         """Process a single album record for Algolia indexing."""
         try:
             if not album_data.get("primary-type") == "Album":
@@ -149,7 +153,9 @@ class AlbumDataProcessor:
             album = {
                 "objectID": str(album_data.get("id", "")),
                 "title": self.clean_text(album_data.get("title")),
-                "first_release_date": self.parse_date(album_data.get("first-release-date")),
+                "first_release_date": self.parse_date(
+                    album_data.get("first-release-date")
+                ),
             }
 
             # Extract artist information
@@ -163,29 +169,37 @@ class AlbumDataProcessor:
             # Extract secondary types
             secondary_types = album_data.get("secondary-types", [])
             if secondary_types:
-                album["secondary_types"] = [self.clean_text(st) for st in secondary_types if st]
+                album["secondary_types"] = [
+                    self.clean_text(st) for st in secondary_types if st
+                ]
 
             # Handle rating information
             rating_info = album_data.get("rating", {})
             if isinstance(rating_info, dict):
                 if rating_info.get("value") is not None:
-                    album["rating_value"] = self.safe_numeric_convert(rating_info["value"], 0.0)
+                    album["rating_value"] = self.safe_numeric_convert(
+                        rating_info["value"], 0.0
+                    )
                 if rating_info.get("votes-count") is not None:
-                    album["rating_count"] = self.safe_numeric_convert(rating_info["votes-count"], 0)
+                    album["rating_count"] = self.safe_numeric_convert(
+                        rating_info["votes-count"], 0
+                    )
 
             # Calculate derived fields
             if album["first_release_date"]:
                 try:
-                    year = datetime.strptime(album["first_release_date"], "%Y-%m-%d").year
+                    year = datetime.strptime(
+                        album["first_release_date"], "%Y-%m-%d"
+                    ).year
                     album["release_year"] = year
-                    album["decade"] = (year // 10) * 10
                 except ValueError:
                     # Try to extract just the year if full date parsing fails
-                    year_match = re.search(r"\b(19|20)\d{2}\b", album["first_release_date"])
+                    year_match = re.search(
+                        r"\b(19|20)\d{2}\b", album["first_release_date"]
+                    )
                     if year_match:
                         year = int(year_match.group())
                         album["release_year"] = year
-                        album["decade"] = (year // 10) * 10
 
             # Create searchable text field
             searchable_fields = [album["title"]]
@@ -205,7 +219,9 @@ class AlbumDataProcessor:
                 album["primary_genre"] = album["genres"][0]
 
             # Remove None values and empty lists
-            album = {k: v for k, v in album.items() if v is not None and v != [] and v != ""}
+            album = {
+                k: v for k, v in album.items() if v is not None and v != [] and v != ""
+            }
 
             # Ensure we have at least a title and objectID
             if not album.get("title") or not album.get("objectID"):
@@ -219,7 +235,9 @@ class AlbumDataProcessor:
             print(f"⚠️  Error processing record {album_data.get('id', 'unknown')}: {e}")
             return None
 
-    def load_json_data_in_batches(self, file_path: Union[str, Path], batch_size: int = 1000):
+    def load_json_data_in_batches(
+        self, file_path: Union[str, Path], batch_size: int = 1000
+    ):
         """
         Load album data from JSON file in batches (generator).
 
@@ -253,7 +271,9 @@ class AlbumDataProcessor:
 
                     # Yield batch when it reaches the specified size
                     if len(current_batch) >= batch_size:
-                        print(f"📦 Loaded batch with {len(current_batch)} records (total: {total_loaded})")
+                        print(
+                            f"📦 Loaded batch with {len(current_batch)} records (total: {total_loaded})"
+                        )
                         yield current_batch
                         current_batch = []
 
@@ -263,7 +283,9 @@ class AlbumDataProcessor:
 
         # Yield remaining records in the last batch
         if current_batch:
-            print(f"📦 Loaded final batch with {len(current_batch)} records (total: {total_loaded})")
+            print(
+                f"📦 Loaded final batch with {len(current_batch)} records (total: {total_loaded})"
+            )
             yield current_batch
 
         print(f"✅ Completed loading {total_loaded} album records in batches")
