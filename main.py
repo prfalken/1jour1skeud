@@ -112,15 +112,6 @@ def main():
     parser = argparse.ArgumentParser(
         description="Sync Music Album database from Kaggle to Algolia",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python main.py                          # Run full sync
-  python main.py --max-records 1000       # Limit to 1000 records for testing
-  python main.py --clear-index            # Clear existing index before sync
-  python main.py --configure              # Configure Algolia index settings
-  python main.py --search "aptetite for destruction"        # Test search functionality
-  python main.py --stats                   # Show index statistics
-""",
     )
 
     parser.add_argument(
@@ -150,6 +141,40 @@ Examples:
     parser.add_argument("--configure", action="store_true", help="Configure Algolia index settings")
     parser.add_argument("--search", type=str, help="Search for a album in Algolia")
     parser.add_argument("--stats", action="store_true", help="Show Algolia index statistics")
+
+    # Build epilog dynamically from declared options
+    def _build_examples_from_parser(p: argparse.ArgumentParser) -> str:
+        examples: list[str] = [
+            "Examples:",
+            "  python main.py                                  # Run full sync",
+        ]
+
+        sample_values = {
+            "max_records": "1000",
+            "batch_size": "500",
+            "data_file": "data/ridethelightning.json",
+            "search": '"appetite for destruction"',
+        }
+
+        for action in p._actions:  # type: ignore[attr-defined]
+            # consider only long-form options and skip help
+            long_opts = [opt for opt in action.option_strings if opt.startswith("--")]
+            if not long_opts or action.dest in {"help"}:
+                continue
+
+            opt = long_opts[0]
+            help_text = (action.help or "").strip()
+
+            # If action.type is None, it's likely a flag (store_true)
+            if getattr(action, "type", None) is None:
+                examples.append(f"  python main.py {opt}            # {help_text}")
+            else:
+                value = sample_values.get(action.dest, "VALUE")
+                examples.append(f"  python main.py {opt} {value}       # {help_text}")
+
+        return "\n".join(examples)
+
+    parser.epilog = _build_examples_from_parser(parser)
     args = parser.parse_args()
 
     # Create app instance
