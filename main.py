@@ -28,9 +28,7 @@ class MusicAlbumSyncApp:
         self.config = Config()
         self.data_processor = AlbumDataProcessor()
 
-        self.algolia_client = SearchClientSync(
-            self.config.ALGOLIA_APPLICATION_ID, self.config.ALGOLIA_API_KEY
-        )
+        self.algolia_client = SearchClientSync(self.config.ALGOLIA_APPLICATION_ID, self.config.ALGOLIA_API_KEY)
         self.algolia_app = AlgoliaApp(self.config, self.algolia_client)
         self.algolia_indexer = AlgoliaIndexer(self.config, self.algolia_client)
         self.algolia_searcher = AlgoliaSearcher(self.config, self.algolia_client)
@@ -47,12 +45,8 @@ class MusicAlbumSyncApp:
             print("   - KAGGLE_KEY: Your Kaggle API key")
             print("   - ALGOLIA_APPLICATION_ID: Your Algolia application ID")
             print("   - ALGOLIA_API_KEY: Your Algolia admin API key")
-            print(
-                "   - ALGOLIA_INDEX_NAME: Name for your albums index (optional, defaults to 'albums')"
-            )
-            print(
-                "\n💡 You can copy .env.example to .env and fill in your credentials."
-            )
+            print("   - ALGOLIA_INDEX_NAME: Name for your albums index (optional, defaults to 'albums')")
+            print("\n💡 You can copy .env.example to .env and fill in your credentials.")
             return False
 
     def run_full_sync_batched(
@@ -121,26 +115,18 @@ def main():
         epilog="""
 Examples:
   python main.py                          # Run full sync
-  python main.py --force-download         # Force re-download from Kaggle
   python main.py --max-records 1000       # Limit to 1000 records for testing
   python main.py --clear-index            # Clear existing index before sync
-  python main.py --test-search "batman"   # Test search functionality
   python main.py --configure              # Configure Algolia index settings
-  python main.py --search "batman"        # Test search functionality
+  python main.py --search "aptetite for destruction"        # Test search functionality
   python main.py --stats                   # Show index statistics
 """,
     )
 
     parser.add_argument(
-        "--force-download",
-        action="store_true",
-        help="Force re-download dataset from Kaggle even if it exists",
-    )
-
-    parser.add_argument(
         "--data-file",
         type=str,
-        help="Load data from a specific JSON file instead of Kaggle",
+        help="Load data from a specific JSON file",
     )
 
     parser.add_argument(
@@ -157,23 +143,13 @@ Examples:
     )
 
     parser.add_argument(
-        "--batch-mode",
-        action="store_true",
-        help="Enable batch processing for large files (recommended for large datasets)",
-    )
-
-    parser.add_argument(
         "--clear-index",
         action="store_true",
         help="Clear existing Algolia index before indexing new data",
     )
-    parser.add_argument(
-        "--configure", action="store_true", help="Configure Algolia index settings"
-    )
+    parser.add_argument("--configure", action="store_true", help="Configure Algolia index settings")
     parser.add_argument("--search", type=str, help="Search for a album in Algolia")
-    parser.add_argument(
-        "--stats", action="store_true", help="Show Algolia index statistics"
-    )
+    parser.add_argument("--stats", action="store_true", help="Show Algolia index statistics")
     args = parser.parse_args()
 
     # Create app instance
@@ -206,9 +182,6 @@ Examples:
                 max_records=args.max_records,
                 batch_size=args.batch_size,
             )
-
-    if not success:
-        sys.exit(1)
 
 
 if __name__ == "__main__":
