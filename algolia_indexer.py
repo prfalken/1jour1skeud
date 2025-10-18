@@ -22,9 +22,7 @@ class AlgoliaIndexer(AlgoliaApp):
         success_count = 0
         error_count = 0
 
-        for i in tqdm(
-            range(0, total_records, self.batch_size), desc="Indexing batches"
-        ):
+        for i in tqdm(range(0, total_records, self.batch_size), desc="Indexing batches"):
             batch = records[i : i + self.batch_size]
 
             try:
@@ -41,6 +39,4 @@ class AlgoliaIndexer(AlgoliaApp):
                 print(f"⚠️  Error processing batch: {e}")
                 error_count += len(batch)
 
-        print(
-            f"✅ Indexing completed: {success_count} successful, {error_count} errors"
-        )
+        print(f"✅ Indexing completed: {success_count} successful, {error_count} errors")
