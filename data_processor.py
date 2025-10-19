@@ -409,7 +409,13 @@ class AlbumDataProcessor:
                 )
                 SELECT
                     ARRAY_AGG(DISTINCT a2.name) AS musician_names,
-                    JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT('name', a2.name, 'instruments', COALESCE(per_artist.instrument_names, ARRAY[]::text[]))) AS musician_details
+                    JSONB_AGG(
+                        DISTINCT JSONB_BUILD_OBJECT(
+                            'name', a2.name,
+                            'mbid', a2.gid::text,
+                            'instruments', COALESCE(per_artist.instrument_names, ARRAY[]::text[])
+                        )
+                    ) AS musician_details
                 FROM per_artist
                 JOIN musicbrainz.artist a2 ON a2.id = per_artist.artist_id
             ) mus ON TRUE
@@ -484,6 +490,31 @@ class AlbumDataProcessor:
         musician_names = row.get("musician_names") or []
         if musician_names:
             album["musicians"] = [self.clean_text(n) for n in musician_names if n]
+
+        # Detailed musicians info with mbid and instruments
+        musician_details = row.get("musician_details") or []
+        if musician_details:
+            normalized_details = []
+            for md in musician_details:
+                if not isinstance(md, dict):
+                    continue
+                name = self.clean_text(md.get("name"))
+                mbid = self.clean_text(md.get("mbid"))
+                instruments = md.get("instruments") or []
+                instruments = [self.clean_text(i) for i in instruments if i]
+                detail_obj = {
+                    k: v
+                    for k, v in {
+                        "name": name,
+                        "mbid": mbid,
+                        "instruments": instruments,
+                    }.items()
+                    if v not in (None, "") and v != []
+                }
+                if detail_obj:
+                    normalized_details.append(detail_obj)
+            if normalized_details:
+                album["musicians_details"] = normalized_details
 
         # Ratings
         if rating_value is not None:
