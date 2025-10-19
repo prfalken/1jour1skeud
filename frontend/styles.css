@@ -213,10 +213,13 @@ body {
 }
 
 .search-result {
-    padding: 1rem;
+    padding: 0.5rem 0.75rem;
     border-bottom: 1px solid var(--border-light);
     cursor: pointer;
     transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
 }
 
 .search-result:last-child {
@@ -237,6 +240,24 @@ body {
     margin-bottom: 0.25rem;
     color: var(--text-primary);
 }
+.search-result-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--border-light);
+    flex-shrink: 0;
+}
+
+.search-result-thumb.placeholder {
+    display: inline-block;
+}
+
+.search-result-text {
+    display: flex;
+    flex-direction: column;
+}
+
 
 .search-result-artist {
     color: var(--text-secondary);
@@ -374,6 +395,20 @@ body {
     border: 1px solid var(--border);
     animation: guessSlideIn 0.3s ease;
 }
+.guess-cover {
+    width: 48px;
+    height: 48px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--border-light);
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+}
+
+.guess-cover.placeholder {
+    display: inline-block;
+}
+
 
 .guess-item.victory {
     background: var(--clue-background);
@@ -770,5 +805,16 @@ body {
     
     .clue-values {
         justify-content: center;
+    }
+
+    .guess-cover {
+        width: 40px;
+        height: 40px;
+        margin-right: 0.5rem;
+    }
+
+    .search-result-thumb {
+        width: 40px;
+        height: 40px;
     }
 }

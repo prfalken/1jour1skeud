@@ -93,7 +93,8 @@ class AlbumGuessrGame {
 
             const attrs = [
                 'objectID', 'title', 'artists', 'genres', 'release_year', 'countries', 'tags',
-                'musicians', 'rating_value', 'rating_count', 'rating'
+                'musicians', 'rating_value', 'rating_count', 'rating',
+                'cover_art_url_250', 'cover_art_url_500', 'cover_art_url_1200', 'cover_art_url'
             ];
 
             this.mysteryAlbum = await this.algoliaIndex.getObject(releaseGroupId, { attributesToRetrieve: attrs });
@@ -176,8 +177,11 @@ class AlbumGuessrGame {
 
         try {
             const searchResponse = await this.algoliaIndex.search(query, {
-                hitsPerPage: 8,
-                attributesToRetrieve: ['objectID', 'title', 'artists', 'genres', 'release_year', 'countries', 'musicians']
+                hitsPerPage: 20,
+                attributesToRetrieve: [
+                    'objectID', 'title', 'artists', 'genres', 'release_year', 'countries', 'musicians',
+                    'cover_art_url_250', 'cover_art_url_500', 'cover_art_url_1200', 'cover_art_url'
+                ]
             });
 
             this.searchResults = searchResponse.hits;
@@ -194,17 +198,22 @@ class AlbumGuessrGame {
             return;
         }
 
-        const resultsHTML = this.searchResults.map((album, index) => `
+        const resultsHTML = this.searchResults.map((album, index) => {
+            const coverUrl = this.getCoverUrl(album);
+            return `
             <div class="search-result ${index === 0 ? 'selected' : ''}" data-album-id="${album.objectID}" data-index="${index}">
-                <div class="search-result-title">${this.escapeHtml(album.title)}</div>
-                <div class="search-result-artist">${this.escapeHtml(album.artists ? album.artists.join(', ') : 'Unknown artist')}</div>
-                <div class="search-result-meta">
-                    ${album.release_year ? `<span>${album.release_year}</span>` : ''}
-                    ${album.genres && album.genres.length > 0 ? `<span>${album.genres[0]}</span>` : ''}
-                    ${album.countries && album.countries.length > 0 ? `<span>${album.countries[0]}</span>` : ''}
+                ${coverUrl ? `<img class=\"search-result-thumb\" src=\"${coverUrl}\" alt=\"Cover\">` : `<div class=\"search-result-thumb placeholder\"></div>`}
+                <div class="search-result-text">
+                    <div class="search-result-title">${this.escapeHtml(album.title)}</div>
+                    <div class="search-result-artist">${this.escapeHtml(album.artists ? album.artists.join(', ') : 'Unknown artist')}</div>
+                    <div class="search-result-meta">
+                        ${album.release_year ? `<span>${album.release_year}</span>` : ''}
+                        ${album.genres && album.genres.length > 0 ? `<span>${album.genres[0]}</span>` : ''}
+                        ${album.countries && album.countries.length > 0 ? `<span>${album.countries[0]}</span>` : ''}
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
 
         this.elements.searchResults.innerHTML = resultsHTML;
         this.elements.searchResults.classList.add('show');
@@ -451,8 +460,11 @@ class AlbumGuessrGame {
             return;
         }
 
-        const guessesHTML = this.guesses.map(guess => `
+        const guessesHTML = this.guesses.map(guess => {
+            const coverUrl = this.getCoverUrl(guess.album);
+            return `
             <div class="guess-item ${guess.correct ? 'victory' : ''}">
+                ${coverUrl ? `<img class=\"guess-cover\" src=\"${coverUrl}\" alt=\"Cover\">` : `<div class=\"guess-cover placeholder\"></div>`}
                 <div class="guess-info">
                     <div class="guess-title">${this.escapeHtml(guess.album.title)}</div>
                     <div class="guess-artist">${this.escapeHtml(guess.album.artists ? guess.album.artists.join(', ') : 'Unknown artist')}</div>
@@ -463,8 +475,8 @@ class AlbumGuessrGame {
                         `<i class=\"bi bi-lightbulb\"></i> ${guess.cluesRevealed.length} clue(s)`
                     }
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
 
         this.elements.guessesContainer.innerHTML = guessesHTML;
     }
@@ -532,6 +544,11 @@ class AlbumGuessrGame {
 
     showError(message) {
         alert(message); // Simple error handling - could be improved with custom modal
+    }
+
+    getCoverUrl(album) {
+        if (!album) return null;
+        return album.cover_art_url_250 || album.cover_art_url_500 || album.cover_art_url_1200 || album.cover_art_url || null;
     }
 
     escapeHtml(text) {
