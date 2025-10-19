@@ -34,6 +34,12 @@ const GAME_CONFIG = {
             icon: 'bi-globe',
             description: 'Pays d\'origine'
         },
+        { 
+            key: 'musicians', 
+            label: 'Musiciens', 
+            icon: 'bi-people-fill',
+            description: 'Musiciens/contributeurs en commun'
+        },
     ]
 };
 

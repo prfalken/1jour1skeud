@@ -87,7 +87,7 @@ class Game1Jour1Skeud {
                 if (devData.objectID && this.algoliaIndex) {
                     const attrs = [
                         'objectID', 'title', 'artists', 'genres', 'release_year', 'countries', 'tags',
-                        'rating_value', 'rating_count', 'rating'
+                        'musicians', 'rating_value', 'rating_count', 'rating'
                     ];
                     try {
                         const obj = await this.algoliaIndex.getObject(devData.objectID, { attributesToRetrieve: attrs });
@@ -177,7 +177,7 @@ class Game1Jour1Skeud {
         try {
             const searchResponse = await this.algoliaIndex.search(query, {
                 hitsPerPage: 8,
-                attributesToRetrieve: ['objectID', 'title', 'artists', 'genres', 'release_year', 'countries']
+                attributesToRetrieve: ['objectID', 'title', 'artists', 'genres', 'release_year', 'countries', 'musicians']
             });
 
             this.searchResults = searchResponse.hits;
