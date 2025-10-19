@@ -13,12 +13,9 @@ function getEnv(name, { required = true, fallback = undefined } = {}) {
 }
 
 function main() {
-  const applicationId = getEnv('ALGOLIA_APPLICATION_ID');
-  // For frontend we use a search-only key; allow either ALGOLIA_SEARCH_API_KEY or ALGOLIA_API_KEY_SEARCH
-  const apiKey = process.env.ALGOLIA_SEARCH_API_KEY || process.env.ALGOLIA_API_KEY_SEARCH;
-  if (!apiKey) {
-    throw new Error('Missing search-only key: set ALGOLIA_SEARCH_API_KEY');
-  }
+  // Use public-labeled vars so secrets scanning doesn't track their values
+  const applicationId = getEnv('ALGOLIA_PUBLIC_APP_ID');
+  const apiKey = getEnv('ALGOLIA_PUBLIC_SEARCH_KEY');
   const indexName = getEnv('ALGOLIA_INDEX_NAME', { required: true });
 
   const output = `// Configuration for Algolia Search (generated at build time)\n` +

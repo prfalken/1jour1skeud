@@ -1,4 +1,4 @@
-class Game1Jour1Skeud {
+class AlbumGuessrGame {
     constructor() {
         this.algoliaClient = null;
         this.algoliaIndex = null;
@@ -27,7 +27,7 @@ class Game1Jour1Skeud {
             console.log('Algolia initialized successfully');
         } catch (error) {
             console.error('Failed to initialize Algolia:', error);
-            this.showError('Erreur de connexion à la base de données. Veuillez recharger la page.');
+            this.showError('Failed to connect to the search index. Please refresh the page.');
         }
     }
 
@@ -53,15 +53,8 @@ class Game1Jour1Skeud {
             loading: document.getElementById('loading')
         };
 
-        // Set current date
-        const today = new Date();
-        const options = { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        };
-        this.elements.gameDate.textContent = today.toLocaleDateString('fr-FR', options);
+        // Show refresh-based info
+        this.elements.gameDate.textContent = 'New mystery on each refresh';
     }
 
     initializeGame() {
@@ -73,7 +66,7 @@ class Game1Jour1Skeud {
             })
             .catch(error => {
                 console.error('Failed to initialize game:', error);
-                this.showError('Erreur lors du chargement du jeu. Veuillez recharger la page.');
+                this.showError('Error while loading the game. Please refresh the page.');
                 this.showLoading(false);
             });
     }
@@ -108,7 +101,7 @@ class Game1Jour1Skeud {
             console.log(this.mysteryAlbum);
             return this.mysteryAlbum;
         } catch (error) {
-            console.error('Failed to select daily album:', error);
+            console.error('Failed to select random album:', error);
             throw error;
         }
     }
@@ -204,7 +197,7 @@ class Game1Jour1Skeud {
         const resultsHTML = this.searchResults.map((album, index) => `
             <div class="search-result ${index === 0 ? 'selected' : ''}" data-album-id="${album.objectID}" data-index="${index}">
                 <div class="search-result-title">${this.escapeHtml(album.title)}</div>
-                <div class="search-result-artist">${this.escapeHtml(album.artists ? album.artists.join(', ') : 'Artiste inconnu')}</div>
+                <div class="search-result-artist">${this.escapeHtml(album.artists ? album.artists.join(', ') : 'Unknown artist')}</div>
                 <div class="search-result-meta">
                     ${album.release_year ? `<span>${album.release_year}</span>` : ''}
                     ${album.genres && album.genres.length > 0 ? `<span>${album.genres[0]}</span>` : ''}
@@ -374,15 +367,15 @@ class Game1Jour1Skeud {
             // We have years both before and after - show range
             const latestBefore = Math.max(...yearsBefore);
             const earliestAfter = Math.min(...yearsAfter);
-            yearHint = `entre ${latestBefore} et ${earliestAfter}`;
+            yearHint = `between ${latestBefore} and ${earliestAfter}`;
         } else if (yearsBefore.length > 0) {
             // We only have years before - show "after X"
             const latestBefore = Math.max(...yearsBefore);
-            yearHint = `après ${latestBefore}`;
+            yearHint = `after ${latestBefore}`;
         } else if (yearsAfter.length > 0) {
             // We only have years after - show "before X"
             const earliestAfter = Math.min(...yearsAfter);
-            yearHint = `avant ${earliestAfter}`;
+            yearHint = `before ${earliestAfter}`;
         }
         
         // Update the discovered clues with the new year hint
@@ -422,7 +415,7 @@ class Game1Jour1Skeud {
             this.elements.cluesContainer.innerHTML = `
                 <div class="no-clues">
                     <i class="bi bi-search"></i>
-                    <p>Faites un premier essai pour découvrir des indices...</p>
+                    <p>Make a first guess to reveal clues...</p>
                 </div>
             `;
             return;
@@ -462,12 +455,12 @@ class Game1Jour1Skeud {
             <div class="guess-item ${guess.correct ? 'victory' : ''}">
                 <div class="guess-info">
                     <div class="guess-title">${this.escapeHtml(guess.album.title)}</div>
-                    <div class="guess-artist">${this.escapeHtml(guess.album.artists ? guess.album.artists.join(', ') : 'Artiste inconnu')}</div>
+                    <div class="guess-artist">${this.escapeHtml(guess.album.artists ? guess.album.artists.join(', ') : 'Unknown artist')}</div>
                 </div>
                 <div class="guess-clues ${guess.correct ? 'victory' : ''}">
                     ${guess.correct ? 
-                        '<i class="bi bi-trophy-fill"></i> Victoire !' : 
-                        `<i class="bi bi-lightbulb"></i> ${guess.cluesRevealed.length} indice(s)`
+                        '<i class="bi bi-trophy-fill"></i> Victory!' : 
+                        `<i class=\"bi bi-lightbulb\"></i> ${guess.cluesRevealed.length} clue(s)`
                     }
                 </div>
             </div>
@@ -480,7 +473,7 @@ class Game1Jour1Skeud {
         // Display mystery album
         const mysteryAlbumHTML = `
             <div class="mystery-album-title">${this.escapeHtml(this.mysteryAlbum.title)}</div>
-            <div class="mystery-album-artist">${this.escapeHtml(this.mysteryAlbum.artists ? this.mysteryAlbum.artists.join(', ') : 'Artiste inconnu')}</div>
+            <div class="mystery-album-artist">${this.escapeHtml(this.mysteryAlbum.artists ? this.mysteryAlbum.artists.join(', ') : 'Unknown artist')}</div>
             <div class="mystery-album-meta">
                 ${this.mysteryAlbum.release_year ? `<span>📅 ${this.mysteryAlbum.release_year}</span>` : ''}
                 ${this.mysteryAlbum.genres && this.mysteryAlbum.genres.length > 0 ? `<span>🎵 ${this.mysteryAlbum.genres[0]}</span>` : ''}
@@ -509,22 +502,22 @@ class Game1Jour1Skeud {
     }
 
     shareResult() {
-        const albumInfo = `"${this.mysteryAlbum.title}" par ${this.mysteryAlbum.artists ? this.mysteryAlbum.artists.join(', ') : 'Artiste inconnu'}`;
-        const stats = `${this.guessCount} essai(s) • ${this.discoveredClues.size} indice(s) découvert(s)`;
-        
-        const shareText = `🎵 J'ai découvert le disque mystère du jour !\n\n${albumInfo}\n${stats}\n\n🎵 1jour1skeud 🎵`;
+        const albumInfo = `"${this.mysteryAlbum.title}" by ${this.mysteryAlbum.artists ? this.mysteryAlbum.artists.join(', ') : 'Unknown artist'}`;
+        const stats = `${this.guessCount} guess(es) • ${this.discoveredClues.size} clue(s) discovered`;
+
+        const shareText = `🎵 I found the mystery album!\n\n${albumInfo}\n${stats}\n\n🎵 AlbumGuessr 🎵`;
 
         if (navigator.share) {
             navigator.share({
-                title: '1jour1skeud',
+                title: 'AlbumGuessr',
                 text: shareText
             });
         } else {
             // Fallback: copy to clipboard
             navigator.clipboard.writeText(shareText).then(() => {
-                alert('Résultat copié dans le presse-papiers !');
+                alert('Result copied to clipboard!');
             }).catch(() => {
-                alert('Impossible de copier le résultat. Vous pouvez le partager manuellement :\n\n' + shareText);
+                alert('Unable to copy the result. You can share it manually:\n\n' + shareText);
             });
         }
     }
@@ -563,5 +556,5 @@ class Game1Jour1Skeud {
 
 // Initialize the game when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new Game1Jour1Skeud();
+    new AlbumGuessrGame();
 });
