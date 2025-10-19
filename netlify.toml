@@ -1,8 +1,10 @@
 [build]
   base = "frontend"
   publish = "."
-  command = "echo Skipping build for static site"
+  command = "node build-config.js && echo Static site build-ready"
 
 [build.environment]
   NODE_VERSION = "20.17.0"
+  # Exclude the generated config (contains search-only key) from secrets scanning
+  SECRETS_SCAN_OMIT_PATHS = "frontend/config.js"
 

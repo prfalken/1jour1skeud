@@ -127,3 +127,4 @@ data/
 *.csv
 *.json
 *.zip
+frontend/config.js
