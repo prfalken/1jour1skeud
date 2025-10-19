@@ -15,7 +15,7 @@ function getEnv(name, { required = true, fallback = undefined } = {}) {
 function main() {
   // Use public-labeled vars so secrets scanning doesn't track their values
   const applicationId = getEnv('ALGOLIA_APPLICATION_ID');
-  const apiKey = getEnv('ALGOLIA_PUBLIC_SEARCH_KEY');
+  const apiKey = getEnv('ALGOLIA_SEARCH_API_KEY');
   const indexName = getEnv('ALGOLIA_INDEX_NAME', { required: true });
 
   const output = `// Configuration for Algolia Search (generated at build time)\n` +
