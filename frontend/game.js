@@ -481,14 +481,88 @@ class AlbumGuessrGame {
             return;
         }
 
-        const guessesHTML = this.guesses.map(guess => {
+		const guessesHTML = this.guesses.slice().reverse().map(guess => {
             const coverUrl = this.getCoverUrl(guess.album);
+            // Build per-attribute chips: green for common values, red for guessed-only values
+            let detailedCluesHTML = '';
+            if (!guess.correct) {
+                const categories = GAME_CONFIG.clueCategories.map(c => c.key);
+                const revealedByCategory = new Map();
+                (guess.cluesRevealed || []).forEach(c => revealedByCategory.set(c.category, new Set(c.values)));
+
+                const sections = [];
+                categories.forEach(catKey => {
+                    if (catKey === 'release_year') {
+                        // Year special-case: show chip relative to mystery year when available
+                        const gy = guess.album.release_year;
+                        const my = this.mysteryAlbum && this.mysteryAlbum.release_year;
+                        if (!gy) return;
+                        let cls = 'guess-chip-miss';
+                        let label = String(gy);
+                        if (my) {
+                            const gyi = parseInt(gy);
+                            const myi = parseInt(my);
+                            if (!isNaN(gyi) && !isNaN(myi)) {
+                                if (gyi === myi) {
+                                    cls = 'guess-chip-hit';
+                                } else if (gyi < myi) {
+                                    cls = 'guess-chip-miss';
+                                    label = `${gyi} (before)`;
+                                } else if (gyi > myi) {
+                                    cls = 'guess-chip-miss';
+                                    label = `${gyi} (after)`;
+                                }
+                            }
+                        }
+                        const catConf = GAME_CONFIG.clueCategories.find(c => c.key === 'release_year');
+                        sections.push(`
+                            <div class="guess-attr">
+                                <div class="guess-attr-title"><i class="bi ${catConf.icon}"></i> ${catConf.label}</div>
+                                <div class="guess-attr-values">
+                                    <span class="guess-chip ${cls}">${this.escapeHtml(label)}</span>
+                                </div>
+                            </div>
+                        `);
+                        return;
+                    }
+
+                    const guessVal = guess.album[catKey];
+                    const mysteryVal = this.mysteryAlbum ? this.mysteryAlbum[catKey] : undefined;
+                    if (!guessVal) return;
+                    const catConf = GAME_CONFIG.clueCategories.find(c => c.key === catKey);
+                    const revealed = revealedByCategory.get(catKey) || new Set();
+
+                    const guessValues = Array.isArray(guessVal) ? guessVal : [guessVal];
+                    const valuesHTML = guessValues.map(v => {
+                        const vStr = String(v);
+                        const isCommon = revealed.has(vStr);
+                        const cls = isCommon ? 'guess-chip-hit' : 'guess-chip-miss';
+                        return `<span class="guess-chip ${cls}">${this.escapeHtml(vStr)}</span>`;
+                    }).join('');
+
+                    // Only render section if there is at least one value
+                    if (valuesHTML) {
+                        sections.push(`
+                            <div class="guess-attr">
+                                <div class="guess-attr-title"><i class="bi ${catConf.icon}"></i> ${catConf.label}</div>
+                                <div class="guess-attr-values">${valuesHTML}</div>
+                            </div>
+                        `);
+                    }
+                });
+
+                if (sections.length > 0) {
+                    detailedCluesHTML = `<div class="guess-details">${sections.join('')}</div>`;
+                }
+            }
+
             return `
             <div class="guess-item ${guess.correct ? 'victory' : ''}">
                 ${coverUrl ? `<img class=\"guess-cover\" src=\"${coverUrl}\" alt=\"Cover\">` : `<div class=\"guess-cover placeholder\"></div>`}
                 <div class="guess-info">
                     <div class="guess-title">${this.escapeHtml(guess.album.title)}</div>
                     <div class="guess-artist">${this.escapeHtml(guess.album.artists ? guess.album.artists.join(', ') : 'Unknown artist')}</div>
+                    ${!guess.correct ? detailedCluesHTML : ''}
                 </div>
                 <div class="guess-clues ${guess.correct ? 'victory' : ''}">
                     ${guess.correct ? 

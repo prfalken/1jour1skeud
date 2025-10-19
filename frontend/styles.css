@@ -452,6 +452,56 @@ body {
     font-size: 0.9rem;
 }
 
+.guess-details {
+    margin-top: 0.5rem;
+    display: grid;
+    gap: 0.5rem;
+}
+
+.guess-attr {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) / 1.25);
+    padding: 0.5rem;
+}
+
+.guess-attr-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin-bottom: 0.35rem;
+}
+
+.guess-attr-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.guess-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.guess-chip-hit {
+    background: var(--clue-background);
+    color: var(--clue-border);
+    border-color: var(--clue-border);
+}
+
+.guess-chip-miss {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: #ef4444;
+}
+
 .guess-clues {
     display: flex;
     align-items: center;
