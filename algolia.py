@@ -32,4 +32,29 @@ class AlgoliaApp:
         """Configure Algolia index settings for optimal album search with rating support."""
         print("⚙️  Configuring index settings for optimal album search...")
         print("🎯 Ratings will be indexed for search ranking and filtering")
-        print("📝 Custom ranking: rating_value (desc) → rating_count (desc) → release_year (desc)")
+        print(
+            "📝 Custom ranking: rating_score (desc) → rating_value (desc) → rating_count (desc) → release_year (desc)"
+        )
+        try:
+            self.client.set_settings(
+                index_name=self.index_name,
+                settings={
+                    "searchableAttributes": [
+                        "title,artists,genres,main_artist,primary_genre",
+                    ],
+                    "attributesForFaceting": [
+                        "filterOnly(release_year)",
+                        "filterOnly(primary_genre)",
+                        "filterOnly(countries)",
+                    ],
+                    "customRanking": [
+                        "desc(rating_score)",
+                        "desc(rating_value)",
+                        "desc(rating_count)",
+                        "desc(release_year)",
+                    ],
+                },
+            )
+            print("✅ Algolia settings updated")
+        except Exception as e:
+            print(f"⚠️  Failed to update Algolia settings: {e}")

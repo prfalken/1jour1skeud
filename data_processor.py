@@ -205,6 +205,15 @@ class AlbumDataProcessor:
             if album.get("genres"):
                 album["primary_genre"] = album["genres"][0]
 
+            # Compute a composite rating score for ranking: rating_value * rating_count
+            # rating_value is expected on a 0..5 scale (float), rating_count is an integer
+            if album.get("rating_value") is not None and album.get("rating_count") is not None:
+                try:
+                    album["rating_score"] = float(album["rating_value"]) * int(album["rating_count"])
+                except Exception:
+                    # If conversion fails, omit the score
+                    pass
+
             # Remove None values and empty lists
             album = {k: v for k, v in album.items() if v is not None and v != [] and v != ""}
 
@@ -522,6 +531,13 @@ class AlbumDataProcessor:
         rating_count = row.get("rating_count")
         if rating_count is not None:
             album["rating_count"] = int(rating_count)
+
+        # Composite score for ranking: rating_value * rating_count
+        if album.get("rating_value") is not None and album.get("rating_count") is not None:
+            try:
+                album["rating_score"] = float(album["rating_value"]) * int(album["rating_count"])
+            except Exception:
+                pass
 
         # Derived fields
         if first_release_date:
