@@ -358,7 +358,9 @@ class AlbumDataProcessor:
                 ac_info.artist_names,
                 ac_info.countries,
                 tags.tag_names,
-                sec_types.secondary_names
+                sec_types.secondary_names,
+                mus.musician_names,
+                mus.musician_details
             FROM musicbrainz.release_group rg
             JOIN musicbrainz.release_group_primary_type rpt ON rpt.id = rg.type
             LEFT JOIN musicbrainz.release_group_meta rgm ON rgm.id = rg.id
@@ -384,6 +386,32 @@ class AlbumDataProcessor:
                 JOIN musicbrainz.release_group_secondary_type rgst ON rgst.id = rgstj.secondary_type
                 WHERE rgstj.release_group = rg.id
             ) sec_types ON TRUE
+            LEFT JOIN LATERAL (
+                WITH recs AS (
+                    SELECT DISTINCT rec.id AS recording_id
+                    FROM musicbrainz.release r2
+                    JOIN musicbrainz.medium m ON m.release = r2.id
+                    JOIN musicbrainz.track t ON t.medium = m.id
+                    JOIN musicbrainz.recording rec ON rec.id = t.recording
+                    WHERE r2.release_group = rg.id
+                ),
+                per_artist AS (
+                    SELECT
+                        lar.entity0 AS artist_id,
+                        ARRAY_AGG(DISTINCT lat.name) FILTER (WHERE lat.name IS NOT NULL AND lat.name <> '') AS instrument_names
+                    FROM recs
+                    JOIN musicbrainz.l_artist_recording lar ON lar.entity1 = recs.recording_id
+                    JOIN musicbrainz.link lk ON lk.id = lar.link
+                    LEFT JOIN musicbrainz.link_attribute la ON la.link = lk.id
+                    LEFT JOIN musicbrainz.link_attribute_type lat ON lat.id = la.attribute_type
+                    GROUP BY lar.entity0
+                )
+                SELECT
+                    ARRAY_AGG(DISTINCT a2.name) AS musician_names,
+                    JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT('name', a2.name, 'instruments', COALESCE(per_artist.instrument_names, ARRAY[]::text[]))) AS musician_details
+                FROM per_artist
+                JOIN musicbrainz.artist a2 ON a2.id = per_artist.artist_id
+            ) mus ON TRUE
             WHERE rpt.name = 'Album' AND rg.id > %s
             ORDER BY rg.id
             LIMIT %s
@@ -433,6 +461,11 @@ class AlbumDataProcessor:
         secondary_names = row.get("secondary_names") or []
         if secondary_names:
             album["secondary_types"] = [self.clean_text(s) for s in secondary_names if s]
+
+        # Musicians (contributors across recordings of the album)
+        musician_names = row.get("musician_names") or []
+        if musician_names:
+            album["musicians"] = [self.clean_text(n) for n in musician_names if n]
 
         # Ratings
         if rating_value is not None:
