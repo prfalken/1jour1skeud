@@ -1,6 +1,7 @@
 [build]
+  base = "."
   publish = "frontend"
-  command = "npm run build"
+  command = "echo Skipping build for static site"
 
 [build.environment]
   NODE_VERSION = "20.17.0"
