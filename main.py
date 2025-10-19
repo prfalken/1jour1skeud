@@ -110,14 +110,8 @@ class MusicAlbumSyncApp:
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Sync Music Album database from Kaggle to Algolia",
+        description="Sync Music Album database to Algolia",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    parser.add_argument(
-        "--data-file",
-        type=str,
-        help="Load data from a specific JSON file",
     )
 
     parser.add_argument(
