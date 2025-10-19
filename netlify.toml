@@ -1,6 +1,6 @@
 [build]
-  base = "."
-  publish = "frontend"
+  base = "frontend"
+  publish = "."
   command = "echo Skipping build for static site"
 
 [build.environment]
