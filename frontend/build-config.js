@@ -26,11 +26,11 @@ function main() {
     `};\n\n` +
     `const GAME_CONFIG = {\n` +
     `    clueCategories: [\n` +
-    `        { key: 'artists', label: 'Artistes', icon: 'bi-person-fill', description: 'Artistes en commun' },\n` +
-    `        { key: 'genres', label: 'Genres', icon: 'bi-music-note-list', description: 'Genres musicaux partagés' },\n` +
-    `        { key: 'release_year', label: 'Année', icon: 'bi-calendar-fill', description: 'Année de sortie' },\n` +
-    `        { key: 'countries', label: 'Pays', icon: 'bi-globe', description: 'Pays d\\'origine' },\n` +
-    `        { key: 'musicians', label: 'Musiciens', icon: 'bi-people-fill', description: 'Musiciens/contributeurs en commun' }\n` +
+    `        { key: 'artists', label: 'Artists', icon: 'bi-person-fill', description: 'Shared artists' },\n` +
+    `        { key: 'genres', label: 'Genres', icon: 'bi-music-note-list', description: 'Shared musical genres' },\n` +
+    `        { key: 'release_year', label: 'Year', icon: 'bi-calendar-fill', description: 'Release year' },\n` +
+    `        { key: 'countries', label: 'Countries', icon: 'bi-globe', description: 'Countries of origin' },\n` +
+    `        { key: 'musicians', label: 'Musicians', icon: 'bi-people-fill', description: 'Shared musicians/contributors' }\n` +
     `    ]\n` +
     `};\n\n` +
     `if (typeof module !== 'undefined' && module.exports) {\n` +
