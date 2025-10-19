@@ -6,7 +6,7 @@
 [build.environment]
   NODE_VERSION = "20.17.0"
   # Exclude the generated config (contains search-only key) from secrets scanning
-  SECRETS_SCAN_OMIT_PATHS = "frontend/config.js"
-  # Omit non-secret constant values (like index name) from secret detection
-  SECRETS_SCAN_OMIT_KEYS = "ALGOLIA_INDEX_NAME"
+  SECRETS_SCAN_OMIT_PATHS = "config.js"
+  # Omit known non-sensitive env keys used in the frontend
+  SECRETS_SCAN_OMIT_KEYS = "ALGOLIA_INDEX_NAME,ALGOLIA_APPLICATION_ID,ALGOLIA_SEARCH_API_KEY"
 
