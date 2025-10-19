@@ -6,5 +6,5 @@
 [build.environment]
   NODE_VERSION = "20.17.0"
   # Exclude the generated config (contains search-only key) from secrets scanning
-  SECRETS_SCAN_OMIT_PATHS = "frontend/config.js"
+  SECRETS_SCAN_OMIT_PATHS = "config.js"
 
