@@ -1,245 +1,170 @@
-# Music Album Database Sync to Algolia
+# 1jour1skeud — MusicBrainz → Algolia indexer + daily guessing game
 
-A Python application that fetches the latest music album database from Kaggle and indexes it into Algolia for powerful search functionality.
+This repository contains:
 
-## Features
+- A Python CLI that streams MusicBrainz release groups from PostgreSQL, normalizes album fields, and indexes them into Algolia for fast search.
+- A small static frontend game in `frontend/` where you guess the “mystery album” of the day using Algolia-powered search and progressive clues.
 
-- 🎬 Fetches music album data from Kaggle datasets
-- 🔄 Processes and cleans movie data for optimal search
-- 🔍 Indexes data to Algolia with optimized search settings
-- 📊 Batch processing with progress indicators
-- 🧪 Built-in testing and validation
-- ⚙️ Configurable via environment variables
-- 🚀 Command-line interface with multiple options
+## What it does
+
+- Connects to a MusicBrainz PostgreSQL database and selects release groups of primary type "Album" with related metadata (artists, countries, tags → genres, secondary types, contributors, ratings, first release date, and a representative cover art).
+- Normalizes each record to a compact object suitable for search and faceting.
+- Indexes records to Algolia in batches.
+- Provides a static web game that:
+  - Picks a daily mystery album from `frontend/mistery-albums.jsonl` (MBIDs).
+  - Lets you search the Algolia index and submit guesses.
+  - Reveals shared attributes (artists, genres, countries, musicians, year hints) until you find the right album.
 
 ## Prerequisites
 
-Before running this application, you need:
+- Python 3.10+
+- Algolia account with:
+  - Application ID
+  - Admin API key (for indexing from the backend)
+  - Search-only API key (for the frontend)
+- Access to a MusicBrainz PostgreSQL database (host, port, database name, user, password). You can point to your own instance or a replica populated with MusicBrainz and Cover Art Archive tables.
 
-1. **Kaggle Account & API Key**
-   - Create an account at [kaggle.com](https://www.kaggle.com)
-   - Generate API credentials at [kaggle.com/settings](https://www.kaggle.com/settings)
+Note: `KAGGLE_USERNAME`/`KAGGLE_KEY` exist in `config.py` and are not used by the current indexing flow, but the runtime validation currently expects them to be present. Set any dummy values for these two variables in your `.env` to pass validation.
 
-2. **Algolia Account & Credentials**
-   - Create an account at [algolia.com](https://www.algolia.com)
-   - Get your Application ID and Admin API Key from the dashboard
+## Install
 
-3. **Python 3.8+**
-
-## Installation
-
-1. Clone this repository:
 ```bash
 git clone <repository-url>
-cd movies-sync
-```
+cd 1jour1skeud
 
-2. Create and activate a virtual environment:
-```bash
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Set up environment variables:
-```bash
-cp .env.example .env
-```
+## Configure
 
-Edit `.env` with your credentials:
+Create a `.env` file at the project root with your settings:
+
 ```env
-# Kaggle API credentials
-KAGGLE_USERNAME=your_kaggle_username
-KAGGLE_KEY=your_kaggle_key
-
-# Algolia credentials
+# Algolia (backend indexing)
 ALGOLIA_APPLICATION_ID=your_algolia_app_id
 ALGOLIA_API_KEY=your_algolia_admin_api_key
+ALGOLIA_INDEX_NAME=1jour1skeud
 
-# Index configuration
-ALGOLIA_INDEX_NAME=movies
+# MusicBrainz PostgreSQL
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=musicbrainz_db
+DB_USER=musicbrainz
+DB_PASSWORD=musicbrainz
+
+# Required by current validation (not used by indexing)
+KAGGLE_USERNAME=dummy
+KAGGLE_KEY=dummy
 ```
 
-## Usage
+## Usage (backend)
 
-### Basic Sync
-Run the complete sync process:
+Run the DB-driven sync to index albums to Algolia:
+
 ```bash
 python main.py
 ```
 
-### Command Line Options
+Useful flags:
 
 ```bash
-# Force re-download from Kaggle
-python main.py --force-download
-
-# Limit records for testing
-python main.py --max-records 1000
-
-# Clear existing index before sync
+# Clear existing index
 python main.py --clear-index
 
-# Test search functionality
-python main.py --test-search "batman"
+# Show index stats
+python main.py --stats
 
-# Show index statistics
-python main.py --show-stats
+# Configure index settings (prints current configuration routine)
+python main.py --configure
 
-# Help
-python main.py --help
+# Limit processed records (for testing) and batch size
+python main.py --max-records 1000 --batch-size 500
+
+# Quick search test from CLI
+python main.py --search "appetite for destruction"
 ```
 
-### Example Workflows
+### Record shape indexed to Algolia
 
-**Initial Setup:**
+Each album is normalized roughly like this:
+
+```json
+{
+  "objectID": "<release-group-gid>",
+  "title": "Ride the Lightning",
+  "artists": ["Metallica"],
+  "countries": ["US"],
+  "genres": ["Thrash Metal"],
+  "secondary_types": ["Compilation"],
+  "musicians": ["Cliff Burton", "Kirk Hammett"],
+  "first_release_date": "1984-07-27",
+  "release_year": 1984,
+  "rating_value": 4.6,       // 0..5, mapped from MusicBrainz 0..100
+  "rating_count": 1234,
+  "main_artist": "Metallica",
+  "primary_genre": "Thrash Metal",
+  "cover_art_url": "https://coverartarchive.org/release/<gid>/front",
+  "cover_art_url_250": "...-250",
+  "cover_art_url_500": "...-500",
+  "cover_art_url_1200": "...-1200"
+}
+```
+
+## Frontend game
+
+The static game lives in `frontend/`.
+
+1) Configure Algolia search credentials in `frontend/config.js`:
+
+```js
+const ALGOLIA_CONFIG = {
+  applicationId: 'YOUR_APP_ID',
+  apiKey: 'YOUR_SEARCH_ONLY_API_KEY',
+  indexName: '1jour1skeud'
+};
+```
+
+2) Generate or update the mystery album list (MBIDs) using your DB:
+
 ```bash
-# First run - download data and create index
-python main.py --clear-index
-
-# Test that everything works
-python main.py --test-search "action"
+# Writes top release-group IDs ranked by (rating * rating_count)
+python top_release_groups.py --limit 1000 > frontend/mistery-albums.jsonl
 ```
 
-**Regular Updates:**
+3) Serve the frontend locally (any static server works):
+
 ```bash
-# Update with latest data
-python main.py --force-download
+cd frontend
+python -m http.server 8000
+# then open http://localhost:8000 in your browser
 ```
 
-**Testing with Limited Data:**
-```bash
-# Test with only 100 records
-python main.py --max-records 100 --clear-index
-```
-
-## Project Structure
+## Project structure
 
 ```
-movies-sync/
-├── main.py              # Main application entry point
-├── config.py            # Configuration management
-├── kaggle_fetcher.py    # Kaggle data fetching
-├── data_processor.py    # Data cleaning and processing
-├── algolia_indexer.py   # Algolia indexing functionality
-├── requirements.txt     # Python dependencies
-├── .env.example        # Environment variables template
-├── .gitignore          # Git ignore rules
-└── README.md           # This file
-```
-
-## Data Processing
-
-The application processes movie data with the following transformations:
-
-### Data Cleaning
-- Text normalization and cleaning
-- Date parsing and standardization
-- Numeric value validation
-- JSON field parsing (genres, production companies, etc.)
-
-### Enhanced Fields
-- **Searchable Text**: Combined searchable content
-- **Image URLs**: Full Albim image URLs for posters and backdrops
-- **Derived Metrics**: Profit, ROI, release year, decade
-- **Faceting Data**: Structured data for filtering
-
-### Algolia Optimization
-- **Search Ranking**: Popularity, ratings, and vote counts
-- **Faceting**: Genre, year, language, companies
-- **Highlighting**: Title and overview snippets
-- **Typo Tolerance**: Smart search suggestions
-
-## Algolia Index Configuration
-
-The application automatically configures your Algolia index with:
-
-- **Searchable Attributes**: title, overview, genres, etc.
-- **Faceting Attributes**: genres, year, language, etc.
-- **Custom Ranking**: popularity, ratings, revenue
-- **Search Features**: typo tolerance, highlighting, snippets
-
-## Search Examples
-
-Once indexed, you can search for movies using various queries:
-
-```javascript
-// Basic search
-index.search('batman')
-
-// Search with filters
-index.search('action', {
-  filters: 'release_year >= 2020 AND genres:Action'
-})
-
-// Faceted search
-index.search('', {
-  facets: ['genres', 'release_year'],
-  maxValuesPerFacet: 10
-})
+1jour1skeud/
+├── main.py                 # CLI entrypoint (DB → Algolia sync, commands)
+├── config.py               # Env/config handling (Algolia + DB)
+├── data_processor.py       # Normalization + DB streaming and JSONL helpers
+├── algolia.py              # Base Algolia app wrapper
+├── algolia_indexer.py      # Batched indexing logic
+├── algolia_searcher.py     # Simple search helper used by CLI
+├── top_release_groups.py   # Utility to produce mystery album candidates
+├── frontend/               # Static game (index.html, config.js, game.js, styles.css)
+├── data/                   # Sample data files (JSON/JSONL)
+├── requirements.txt        # Python dependencies
+└── README.md               # This file
 ```
 
 ## Troubleshooting
 
-### Common Issues
-
-**Kaggle Authentication Error:**
-- Verify your Kaggle username and API key
-- Check that your Kaggle account has API access enabled
-
-**Algolia Connection Error:**
-- Verify your Application ID and API key
-- Ensure you're using the Admin API key (not Search-only)
-
-**Memory Issues:**
-- Use `--max-records` to limit the dataset size
-- The full Album dataset can be several hundred thousand records
-
-**Import Errors:**
-- Ensure all dependencies are installed: `pip install -r requirements.txt`
-- Verify you're using the correct Python environment
-
-### Performance Tips
-
-1. **First Run**: Use `--max-records 1000` to test the setup
-2. **Memory**: Process in smaller batches if you encounter memory issues  
-3. **Network**: Ensure stable internet for Kaggle downloads and Algolia uploads
-4. **Index Settings**: The application optimizes settings automatically
-
-## Dataset Information
-
-This application uses Music Albums datasets available on Kaggle, typically containing:
-
-- Movie titles and descriptions
-- Release dates and runtime
-- Ratings and popularity metrics
-- Genres and production information
-- Cast and crew data (if available)
-- Financial data (budget/revenue)
+- DB connection errors: verify `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` in `.env` and that your MusicBrainz schema is accessible.
+- Algolia errors: check `ALGOLIA_APPLICATION_ID`, `ALGOLIA_API_KEY` (Admin key for backend), and `ALGOLIA_INDEX_NAME`. The frontend must use a search-only key.
+- Empty search results: ensure you ran the indexer (`python main.py`) and the chosen index name matches both backend and frontend configs.
+- Cover art URLs: they rely on Cover Art Archive tables/joins; if missing, those fields will be absent.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## Support
-
-If you encounter issues:
-
-1. Check the troubleshooting section
-2. Verify your environment variables
-3. Test with limited records first
-4. Check the console output for specific error messages
-
-For bugs or feature requests, please open an issue on the repository.
+MIT
