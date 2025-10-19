@@ -79,30 +79,37 @@ class Game1Jour1Skeud {
     }
 
     async selectDailyAlbum() {
-        const devResponse = await fetch('mistery-album-test.json', { cache: 'no-store' });
-        if (devResponse.ok) {
-            const devData = await devResponse.json();
-            if (devData && typeof devData === 'object') {
-                // If only objectID is provided, resolve full object from Algolia
-                if (devData.objectID && this.algoliaIndex) {
-                    const attrs = [
-                        'objectID', 'title', 'artists', 'genres', 'release_year', 'countries', 'tags',
-                        'musicians', 'rating_value', 'rating_count', 'rating'
-                    ];
-                    try {
-                        const obj = await this.algoliaIndex.getObject(devData.objectID, { attributesToRetrieve: attrs });
-                        this.mysteryAlbum = obj;
-                    } catch (e) {
-                        // Fallback: use data directly from file
-                        this.mysteryAlbum = devData;
-                    }
-                } else {
-                    this.mysteryAlbum = devData;
-                }
-                console.log('Loaded mystery album from mistery-album-test.json');
-                console.log(this.mysteryAlbum);
-                return;
-            }
+        // Pick a random line from mistery-albums.jsonl and use its id as Algolia objectID
+        try {
+            const response = await fetch('mistery-albums.jsonl', { cache: 'no-store' });
+            if (!response.ok) throw new Error('Failed to load mistery-albums.jsonl');
+
+            const text = await response.text();
+            const lines = text
+                .split('\n')
+                .map(l => l.trim())
+                .filter(l => l.length > 0);
+
+            if (lines.length === 0) throw new Error('Empty mistery-albums.jsonl');
+
+            const randomIndex = Math.floor(Math.random() * lines.length);
+            const randomEntry = JSON.parse(lines[randomIndex]);
+            const releaseGroupId = randomEntry.id; // Use as Algolia objectID
+
+            if (!this.algoliaIndex) throw new Error('Algolia index not initialized');
+
+            const attrs = [
+                'objectID', 'title', 'artists', 'genres', 'release_year', 'countries', 'tags',
+                'musicians', 'rating_value', 'rating_count', 'rating'
+            ];
+
+            this.mysteryAlbum = await this.algoliaIndex.getObject(releaseGroupId, { attributesToRetrieve: attrs });
+            console.log('Loaded mystery album from mistery-albums.jsonl');
+            console.log(this.mysteryAlbum);
+            return this.mysteryAlbum;
+        } catch (error) {
+            console.error('Failed to select daily album:', error);
+            throw error;
         }
     }
     
