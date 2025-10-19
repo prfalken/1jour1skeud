@@ -9,6 +9,9 @@ from typing import Any, Dict, List, Optional, Union
 from pathlib import Path
 
 from tqdm import tqdm
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from config import Config
 
 
 class AlbumDataProcessor:
@@ -107,9 +110,7 @@ class AlbumDataProcessor:
         except Exception:
             return None
 
-    def safe_numeric_convert(
-        self, value: Any, default: Union[int, float] = 0
-    ) -> Union[int, float]:
+    def safe_numeric_convert(self, value: Any, default: Union[int, float] = 0) -> Union[int, float]:
         """Safely convert value to numeric type."""
         if value is None:
             return default
@@ -142,9 +143,7 @@ class AlbumDataProcessor:
 
         return countries
 
-    def process_album_record(
-        self, album_data: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+    def process_album_record(self, album_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Process a single album record for Algolia indexing."""
         try:
             if not album_data.get("primary-type") == "Album":
@@ -153,9 +152,7 @@ class AlbumDataProcessor:
             album = {
                 "objectID": str(album_data.get("id", "")),
                 "title": self.clean_text(album_data.get("title")),
-                "first_release_date": self.parse_date(
-                    album_data.get("first-release-date")
-                ),
+                "first_release_date": self.parse_date(album_data.get("first-release-date")),
             }
 
             # Extract artist information
@@ -169,34 +166,24 @@ class AlbumDataProcessor:
             # Extract secondary types
             secondary_types = album_data.get("secondary-types", [])
             if secondary_types:
-                album["secondary_types"] = [
-                    self.clean_text(st) for st in secondary_types if st
-                ]
+                album["secondary_types"] = [self.clean_text(st) for st in secondary_types if st]
 
             # Handle rating information
             rating_info = album_data.get("rating", {})
             if isinstance(rating_info, dict):
                 if rating_info.get("value") is not None:
-                    album["rating_value"] = self.safe_numeric_convert(
-                        rating_info["value"], 0.0
-                    )
+                    album["rating_value"] = self.safe_numeric_convert(rating_info["value"], 0.0)
                 if rating_info.get("votes-count") is not None:
-                    album["rating_count"] = self.safe_numeric_convert(
-                        rating_info["votes-count"], 0
-                    )
+                    album["rating_count"] = self.safe_numeric_convert(rating_info["votes-count"], 0)
 
             # Calculate derived fields
             if album["first_release_date"]:
                 try:
-                    year = datetime.strptime(
-                        album["first_release_date"], "%Y-%m-%d"
-                    ).year
+                    year = datetime.strptime(album["first_release_date"], "%Y-%m-%d").year
                     album["release_year"] = year
                 except ValueError:
                     # Try to extract just the year if full date parsing fails
-                    year_match = re.search(
-                        r"\b(19|20)\d{2}\b", album["first_release_date"]
-                    )
+                    year_match = re.search(r"\b(19|20)\d{2}\b", album["first_release_date"])
                     if year_match:
                         year = int(year_match.group())
                         album["release_year"] = year
@@ -219,9 +206,7 @@ class AlbumDataProcessor:
                 album["primary_genre"] = album["genres"][0]
 
             # Remove None values and empty lists
-            album = {
-                k: v for k, v in album.items() if v is not None and v != [] and v != ""
-            }
+            album = {k: v for k, v in album.items() if v is not None and v != [] and v != ""}
 
             # Ensure we have at least a title and objectID
             if not album.get("title") or not album.get("objectID"):
@@ -235,9 +220,7 @@ class AlbumDataProcessor:
             print(f"⚠️  Error processing record {album_data.get('id', 'unknown')}: {e}")
             return None
 
-    def load_json_data_in_batches(
-        self, file_path: Union[str, Path], batch_size: int = 1000
-    ):
+    def load_json_data_in_batches(self, file_path: Union[str, Path], batch_size: int = 1000):
         """
         Load album data from JSON file in batches (generator).
 
@@ -271,9 +254,7 @@ class AlbumDataProcessor:
 
                     # Yield batch when it reaches the specified size
                     if len(current_batch) >= batch_size:
-                        print(
-                            f"📦 Loaded batch with {len(current_batch)} records (total: {total_loaded})"
-                        )
+                        print(f"📦 Loaded batch with {len(current_batch)} records (total: {total_loaded})")
                         yield current_batch
                         current_batch = []
 
@@ -283,9 +264,7 @@ class AlbumDataProcessor:
 
         # Yield remaining records in the last batch
         if current_batch:
-            print(
-                f"📦 Loaded final batch with {len(current_batch)} records (total: {total_loaded})"
-            )
+            print(f"📦 Loaded final batch with {len(current_batch)} records (total: {total_loaded})")
             yield current_batch
 
         print(f"✅ Completed loading {total_loaded} album records in batches")
@@ -347,6 +326,176 @@ class AlbumDataProcessor:
             print(f"⚠️  {self.error_count} records had processing errors")
 
         return processed_albums
+
+    # ==============================
+    # SQL-backed data loading
+    # ==============================
+
+    def _connect_db(self):
+        """Create a PostgreSQL connection using Config settings."""
+        return psycopg2.connect(
+            host=Config.DB_HOST,
+            port=Config.DB_PORT,
+            dbname=Config.DB_NAME,
+            user=Config.DB_USER,
+            password=Config.DB_PASSWORD,
+        )
+
+    def _build_album_batch_sql(self) -> str:
+        """SQL selecting release groups of primary type 'Album' with metadata, tags, artists, and countries."""
+        # Note: We keyset paginate by rg.id using a parameter :last_id and limit :batch_size
+        # We rely on joins to build arrays for artists, countries, genres (tags), and secondary types
+        return """
+            SELECT
+                rg.id AS rg_id,
+                rg.gid::text AS object_uuid,
+                rg.name AS title,
+                rgm.first_release_date_year AS fr_year,
+                rgm.first_release_date_month AS fr_month,
+                rgm.first_release_date_day AS fr_day,
+                rgm.rating AS rating_0_100,
+                rgm.rating_count AS rating_count,
+                ac_info.artist_names,
+                ac_info.countries,
+                tags.tag_names,
+                sec_types.secondary_names
+            FROM musicbrainz.release_group rg
+            JOIN musicbrainz.release_group_primary_type rpt ON rpt.id = rg.type
+            LEFT JOIN musicbrainz.release_group_meta rgm ON rgm.id = rg.id
+            LEFT JOIN LATERAL (
+                SELECT
+                    ARRAY_AGG(acn.name ORDER BY acn."position") AS artist_names,
+                    ARRAY_REMOVE(ARRAY_AGG(DISTINCT i1.code), NULL) AS countries
+                FROM musicbrainz.artist_credit_name acn
+                JOIN musicbrainz.artist a ON a.id = acn.artist
+                LEFT JOIN musicbrainz.area ar ON ar.id = a.area
+                LEFT JOIN musicbrainz.iso_3166_1 i1 ON i1.area = ar.id
+                WHERE acn.artist_credit = rg.artist_credit
+            ) ac_info ON TRUE
+            LEFT JOIN LATERAL (
+                SELECT ARRAY_AGG(t.name ORDER BY rgt.count DESC) AS tag_names
+                FROM musicbrainz.release_group_tag rgt
+                JOIN musicbrainz.tag t ON t.id = rgt.tag
+                WHERE rgt.release_group = rg.id
+            ) tags ON TRUE
+            LEFT JOIN LATERAL (
+                SELECT ARRAY_AGG(rgst.name ORDER BY rgst.name) AS secondary_names
+                FROM musicbrainz.release_group_secondary_type_join rgstj
+                JOIN musicbrainz.release_group_secondary_type rgst ON rgst.id = rgstj.secondary_type
+                WHERE rgstj.release_group = rg.id
+            ) sec_types ON TRUE
+            WHERE rpt.name = 'Album' AND rg.id > %s
+            ORDER BY rg.id
+            LIMIT %s
+            """
+
+    def _row_to_album(self, row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Convert a SQL row to the normalized album object used for indexing."""
+        first_release_date: Optional[str] = None
+        y = row.get("fr_year")
+        m = row.get("fr_month")
+        d = row.get("fr_day")
+        # Build a normalized YYYY-MM-DD with fallbacks
+        if y:
+            mm = int(m) if m else 1
+            dd = int(d) if d else 1
+            try:
+                first_release_date = datetime(int(y), mm, dd).strftime("%Y-%m-%d")
+            except ValueError:
+                # Fallback to year only
+                first_release_date = f"{int(y):04d}-01-01"
+
+        rating_value: Optional[float] = None
+        rating_0_100 = row.get("rating_0_100")
+        if rating_0_100 is not None:
+            try:
+                rating_value = round(float(rating_0_100) / 20.0, 1)
+            except Exception:
+                rating_value = None
+
+        album: Dict[str, Any] = {
+            "objectID": str(row.get("object_uuid") or ""),
+            "title": self.clean_text(row.get("title")),
+            "first_release_date": first_release_date,
+        }
+
+        # Artists and countries
+        artist_names = row.get("artist_names") or []
+        countries = row.get("countries") or []
+        album["artists"] = [self.clean_text(a) for a in artist_names if a]
+        album["countries"] = [self.clean_text(c) for c in countries if c]
+
+        # Genres mapped from tags
+        tag_names = row.get("tag_names") or []
+        album["genres"] = [self.clean_text(t) for t in tag_names if t]
+
+        # Secondary types
+        secondary_names = row.get("secondary_names") or []
+        if secondary_names:
+            album["secondary_types"] = [self.clean_text(s) for s in secondary_names if s]
+
+        # Ratings
+        if rating_value is not None:
+            album["rating_value"] = rating_value
+        rating_count = row.get("rating_count")
+        if rating_count is not None:
+            album["rating_count"] = int(rating_count)
+
+        # Derived fields
+        if first_release_date:
+            try:
+                album["release_year"] = int(first_release_date[:4])
+            except Exception:
+                pass
+
+        if album.get("artists"):
+            album["main_artist"] = album["artists"][0]
+        if album.get("genres"):
+            album["primary_genre"] = album["genres"][0]
+
+        # Remove null/empty
+        album = {k: v for k, v in album.items() if v not in (None, "") and v != []}
+        if not album.get("title") or not album.get("objectID"):
+            return None
+        self.processed_count += 1
+        return album
+
+    def stream_albums_from_db(
+        self,
+        batch_size: int = 1000,
+        max_records: Optional[int] = None,
+    ):
+        """Generator yielding processed album batches directly from PostgreSQL."""
+        sql = self._build_album_batch_sql()
+        total_yielded = 0
+        last_id = 0
+
+        with self._connect_db() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                while True:
+                    cur.execute(sql, (last_id, batch_size))
+                    rows = cur.fetchall()
+                    if not rows:
+                        break
+
+                    processed_batch: List[Dict[str, Any]] = []
+                    for row in rows:
+                        album = self._row_to_album(row)
+                        if album:
+                            processed_batch.append(album)
+
+                    if not processed_batch:
+                        # Advance last_id even if nothing processed to avoid infinite loop
+                        last_id = rows[-1]["rg_id"]
+                        continue
+
+                    total_yielded += len(processed_batch)
+                    yield processed_batch
+
+                    last_id = rows[-1]["rg_id"]
+
+                    if max_records is not None and total_yielded >= max_records:
+                        break
 
     def process_json_file_in_batches(
         self,

@@ -32,7 +32,7 @@ class AlgoliaIndexer(AlgoliaApp):
                         record["objectID"] = record.get("id", f"album_{i}_{j}")
 
                 # Perform a single batch HTTP request for this chunk
-                self.client.save_objects(index_name=self.index_name, body=batch)
+                self.client.save_objects(index_name=self.index_name, objects=batch)
                 success_count += len(batch)
 
             except Exception as e:

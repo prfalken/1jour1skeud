@@ -201,12 +201,17 @@ def main():
                 result.get("release_year", "N/A"),
             )
     else:
-        if args.data_file:
-            success = app.run_full_sync_batched(
-                data_file=args.data_file,
-                max_records=args.max_records,
-                batch_size=args.batch_size,
-            )
+        print("🚀 Starting DB-driven sync (MusicBrainz → Algolia)")
+        total_indexed = 0
+        for batch in app.data_processor.stream_albums_from_db(
+            batch_size=args.batch_size, max_records=args.max_records
+        ):
+            if not batch:
+                continue
+            app.algolia_indexer.batch_index_records(batch)
+            total_indexed += len(batch)
+            print(f"✅ Indexed so far: {total_indexed}")
+        print(f"🎉 Completed DB sync. Total indexed: {total_indexed}")
 
 
 if __name__ == "__main__":

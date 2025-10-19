@@ -30,6 +30,13 @@ class Config:
     BATCH_SIZE: int = int(os.getenv("BATCH_SIZE", "1000"))
     MAX_RECORDS: Optional[int] = None  # Set to limit records for testing
 
+    # Database configuration (MusicBrainz)
+    DB_HOST: str = os.getenv("DB_HOST", "localhost")
+    DB_PORT: int = int(os.getenv("DB_PORT", "5432"))
+    DB_NAME: str = os.getenv("DB_NAME", "musicbrainz_db")
+    DB_USER: str = os.getenv("DB_USER", "musicbrainz")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "musicbrainz")
+
     @classmethod
     def validate(cls) -> None:
         """Validate that all required configuration is present."""
