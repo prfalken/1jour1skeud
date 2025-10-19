@@ -38,9 +38,13 @@ class AlgoliaApp:
         try:
             self.client.set_settings(
                 index_name=self.index_name,
-                settings={
+                index_settings={
                     "searchableAttributes": [
-                        "title,artists,genres,main_artist,primary_genre",
+                        "title",
+                        "artists",
+                        "genres",
+                        "main_artist",
+                        "primary_genre",
                     ],
                     "attributesForFaceting": [
                         "filterOnly(release_year)",
