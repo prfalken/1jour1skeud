@@ -360,7 +360,8 @@ class AlbumDataProcessor:
                 tags.tag_names,
                 sec_types.secondary_names,
                 mus.musician_names,
-                mus.musician_details
+                mus.musician_details,
+                caa.cover_release_gid
             FROM musicbrainz.release_group rg
             JOIN musicbrainz.release_group_primary_type rpt ON rpt.id = rg.type
             LEFT JOIN musicbrainz.release_group_meta rgm ON rgm.id = rg.id
@@ -412,6 +413,23 @@ class AlbumDataProcessor:
                 FROM per_artist
                 JOIN musicbrainz.artist a2 ON a2.id = per_artist.artist_id
             ) mus ON TRUE
+            LEFT JOIN LATERAL (
+                SELECT rel_choice.rel_gid AS cover_release_gid
+                FROM (
+                    SELECT
+                        r.gid::text AS rel_gid,
+                        MAX(CASE WHEN at.name = 'Front' THEN 1 ELSE 0 END) AS has_front,
+                        MIN(ca.ordering) AS min_ordering
+                    FROM musicbrainz.release r
+                    JOIN cover_art_archive.cover_art ca ON ca.release = r.id
+                    LEFT JOIN cover_art_archive.cover_art_type cat ON cat.id = ca.id
+                    LEFT JOIN cover_art_archive.art_type at ON at.id = cat.type_id
+                    WHERE r.release_group = rg.id
+                    GROUP BY r.gid
+                    ORDER BY has_front DESC, min_ordering ASC
+                    LIMIT 1
+                ) rel_choice
+            ) caa ON TRUE
             WHERE rpt.name = 'Album' AND rg.id > %s
             ORDER BY rg.id
             LIMIT %s
@@ -488,6 +506,14 @@ class AlbumDataProcessor:
 
         # Remove null/empty
         album = {k: v for k, v in album.items() if v not in (None, "") and v != []}
+        # Cover art URLs (Cover Art Archive) using a representative release gid when available
+        cover_release_gid = row.get("cover_release_gid")
+        if cover_release_gid:
+            base = f"https://coverartarchive.org/release/{cover_release_gid}/front"
+            album["cover_art_url"] = base
+            album["cover_art_url_250"] = f"{base}-250"
+            album["cover_art_url_500"] = f"{base}-500"
+            album["cover_art_url_1200"] = f"{base}-1200"
         if not album.get("title") or not album.get("objectID"):
             return None
         self.processed_count += 1
