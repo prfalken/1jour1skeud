@@ -1,4 +1,4 @@
-# 1jour1skeud — MusicBrainz → Algolia indexer + daily guessing game
+# AlbumGuessr — MusicBrainz → Algolia indexer + daily guessing game
 
 This repository contains:
 
@@ -30,7 +30,7 @@ Note: `KAGGLE_USERNAME`/`KAGGLE_KEY` exist in `config.py` and are not used by th
 
 ```bash
 git clone <repository-url>
-cd 1jour1skeud
+cd albumguessr
 
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
@@ -45,7 +45,7 @@ Create a `.env` file at the project root with your settings:
 # Algolia (backend indexing)
 ALGOLIA_APPLICATION_ID=your_algolia_app_id
 ALGOLIA_API_KEY=your_algolia_admin_api_key
-ALGOLIA_INDEX_NAME=1jour1skeud
+ALGOLIA_INDEX_NAME=albumguessr
 
 # MusicBrainz PostgreSQL
 DB_HOST=localhost
@@ -122,7 +122,7 @@ The static game lives in `frontend/`.
 const ALGOLIA_CONFIG = {
   applicationId: 'YOUR_APP_ID',
   apiKey: 'YOUR_SEARCH_ONLY_API_KEY',
-  indexName: '1jour1skeud'
+  indexName: 'albumguessr'
 };
 ```
 
@@ -144,7 +144,7 @@ python -m http.server 8000
 ## Project structure
 
 ```
-1jour1skeud/
+albumguessr/
 ├── main.py                 # CLI entrypoint (DB → Algolia sync, commands)
 ├── config.py               # Env/config handling (Algolia + DB)
 ├── data_processor.py       # Normalization + DB streaming and JSONL helpers

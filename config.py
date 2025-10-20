@@ -20,7 +20,7 @@ class Config:
     # Algolia configuration
     ALGOLIA_APPLICATION_ID: Optional[str] = os.getenv("ALGOLIA_APPLICATION_ID")
     ALGOLIA_API_KEY: Optional[str] = os.getenv("ALGOLIA_API_KEY")
-    ALGOLIA_INDEX_NAME: str = os.getenv("ALGOLIA_INDEX_NAME", "1jour1skeud")
+    ALGOLIA_INDEX_NAME: str = os.getenv("ALGOLIA_INDEX_NAME", "albumguessr")
 
     # Data configuration
     DATA_DIR: str = "data"
