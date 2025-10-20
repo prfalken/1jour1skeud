@@ -10,7 +10,6 @@ class AlbumGuessrGame {
         this.searchResults = [];
         this.selectedResult = null;
         this.discoveredClues = new Map(); // Map of clue category -> Set of values
-        this.artistImageCache = new Map(); // Map of mbid -> image URL
         
         this.initializeAlgolia();
         this.initializeDOM();
@@ -439,13 +438,10 @@ class AlbumGuessrGame {
             if (category === 'musicians') {
                 const nameToDetail = this.buildMusicianDetailMap();
                 valuesHTML = Array.from(values).map(name => {
-                    const detail = nameToDetail.get(name) || null;
-                    const mbid = detail && detail.mbid ? detail.mbid : '';
                     const safeName = this.escapeHtml(name);
-                    // Use data attributes for async image population
+                    // Render musician name only (no avatar), preserving data-name for potential future use
                     return `
-                        <span class="clue-value clue-musician" data-name="${safeName}" ${mbid ? `data-mbid="${mbid}"` : ''}>
-                            <span class="clue-musician-avatar placeholder" aria-hidden="true"></span>
+                        <span class="clue-value clue-musician" data-name="${safeName}">
                             <span class="clue-musician-name">${safeName}</span>
                         </span>
                     `;
@@ -470,9 +466,6 @@ class AlbumGuessrGame {
         }).join('');
 
         this.elements.cluesContainer.innerHTML = cluesHTML;
-
-        // After rendering, hydrate musician avatars asynchronously
-        this.hydrateMusicianAvatars();
     }
 
     updateGuessesHistory() {
@@ -657,91 +650,6 @@ class AlbumGuessrGame {
             });
         }
         return map;
-    }
-
-    hydrateMusicianAvatars() {
-        const nodes = this.elements.cluesContainer.querySelectorAll('.clue-musician');
-        if (!nodes || nodes.length === 0) return;
-        nodes.forEach(node => {
-            const mbid = node.getAttribute('data-mbid');
-            if (!mbid) return; // Without MBID we skip
-            this.fetchArtistImageUrl(mbid).then(url => {
-                if (!url) return;
-                // Replace placeholder with img
-                const avatar = node.querySelector('.clue-musician-avatar');
-                if (avatar) {
-                    const img = document.createElement('img');
-                    img.className = 'clue-musician-avatar';
-                    img.src = url;
-                    img.alt = '';
-                    img.loading = 'lazy';
-                    avatar.replaceWith(img);
-                }
-            }).catch(() => {
-                // ignore
-            });
-        });
-    }
-
-    async fetchArtistImageUrl(mbid) {
-        if (!mbid) return null;
-        if (this.artistImageCache.has(mbid)) return this.artistImageCache.get(mbid);
-
-        try {
-            // Check localStorage cache
-            const lsKey = `artist_img_${mbid}`;
-            const cached = localStorage.getItem(lsKey);
-            if (cached) {
-                const parsed = JSON.parse(cached);
-                if (parsed && parsed.url && parsed.ts && (Date.now() - parsed.ts) < 1000 * 60 * 60 * 24 * 30) { // 30 days
-                    this.artistImageCache.set(mbid, parsed.url);
-                    return parsed.url;
-                }
-            }
-
-            // Step 1: fetch MB artist with URL rels to find Wikidata
-            const mbResp = await fetch(`https://musicbrainz.org/ws/2/artist/${mbid}?inc=url-rels&fmt=json`);
-            if (!mbResp.ok) throw new Error('MB lookup failed');
-            const mbJson = await mbResp.json();
-            const rels = (mbJson && mbJson.relations) ? mbJson.relations : [];
-            let wikidataId = null;
-            for (const rel of rels) {
-                if (rel && rel.type && rel.type.toLowerCase() === 'wikidata' && rel.url && rel.url.resource) {
-                    const m = rel.url.resource.match(/(Q\d+)/i);
-                    if (m) { wikidataId = m[1]; break; }
-                }
-            }
-            if (!wikidataId) {
-                this.artistImageCache.set(mbid, null);
-                return null;
-            }
-
-            // Step 2: fetch P18 image filename from Wikidata
-            const wdResp = await fetch(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${wikidataId}&props=claims&format=json&origin=*`);
-            if (!wdResp.ok) throw new Error('Wikidata lookup failed');
-            const wdJson = await wdResp.json();
-            const entity = wdJson && wdJson.entities && wdJson.entities[wikidataId];
-            const claims = entity && entity.claims && entity.claims.P18;
-            const filename = claims && claims[0] && claims[0].mainsnak && claims[0].mainsnak.datavalue && claims[0].mainsnak.datavalue.value;
-            if (!filename) {
-                this.artistImageCache.set(mbid, null);
-                return null;
-            }
-
-            const url = this.buildCommonsThumbUrl(filename, 64);
-            this.artistImageCache.set(mbid, url);
-            try { localStorage.setItem(lsKey, JSON.stringify({ url, ts: Date.now() })); } catch (_) {}
-            return url;
-        } catch (e) {
-            this.artistImageCache.set(mbid, null);
-            return null;
-        }
-    }
-
-    buildCommonsThumbUrl(filename, width) {
-        const encoded = encodeURIComponent(filename);
-        // Use Special:FilePath to get a scaled image with correct orientation
-        return `https://commons.wikimedia.org/wiki/Special:FilePath/${encoded}?width=${width}`;
     }
 
     escapeHtml(text) {
