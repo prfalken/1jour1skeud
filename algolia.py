@@ -31,20 +31,13 @@ class AlgoliaApp:
     def configure_index_settings(self) -> None:
         """Configure Algolia index settings for optimal album search with rating support."""
         print("⚙️  Configuring index settings for optimal album search...")
-        print("🎯 Ratings will be indexed for search ranking and filtering")
-        print(
-            "📝 Custom ranking: rating_score (desc) → rating_value (desc) → rating_count (desc) → release_year (desc)"
-        )
         try:
             self.client.set_settings(
                 index_name=self.index_name,
                 index_settings={
                     "searchableAttributes": [
                         "title",
-                        "artists",
-                        "genres",
                         "main_artist",
-                        "primary_genre",
                     ],
                     "attributesForFaceting": [
                         "filterOnly(release_year)",
@@ -53,8 +46,6 @@ class AlgoliaApp:
                     ],
                     "customRanking": [
                         "desc(rating_score)",
-                        "desc(rating_value)",
-                        "desc(rating_count)",
                         "desc(release_year)",
                     ],
                 },
