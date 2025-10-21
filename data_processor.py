@@ -4,6 +4,7 @@ Data processor for cleaning and transforming music album data for Algolia indexi
 
 import json
 import re
+import random
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 from pathlib import Path
@@ -445,7 +446,7 @@ class AlbumDataProcessor:
                     LIMIT 1
                 ) rel_choice
             ) caa ON TRUE
-            WHERE rpt.name = 'Album' AND rg.id > %s
+            WHERE rpt.name = 'Album' AND rg.id > %s AND sec_types.secondary_names IS NULL
             ORDER BY rg.id
             LIMIT %s
             """
@@ -564,6 +565,10 @@ class AlbumDataProcessor:
         if not album.get("title") or not album.get("objectID"):
             return None
         self.processed_count += 1
+        # Randomly log the album content approximately once every 1000 records
+        if random.randint(1, 1000) == 1:
+            print(f"Sample album: {json.dumps(album, ensure_ascii=False)}")
+
         return album
 
     def stream_albums_from_db(
